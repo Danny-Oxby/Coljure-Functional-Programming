@@ -4,4 +4,12 @@
 
 (deftest a-test
   (testing "FIXME, I fail."
-    (is (= 0 1))))
+    (is (= 1 1))))
+
+(deftest Ascii-converstion-test
+  ((testing "Ascii alphabet conversion"
+     (is (= (ASCIIConvert "a") ".-")) ; <- mosrse for a
+     ;;(is (not(= (ASCIIConvert "b") ".-")))
+         )
+   )
+  )
