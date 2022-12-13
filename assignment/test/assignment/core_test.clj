@@ -7,9 +7,9 @@
     (is (= 1 1))))
 
 (deftest Ascii-converstion-test
-  ((testing "Ascii alphabet conversion"
+  (testing "Ascii alphabet conversion"
      (is (= (ASCIIConvert "a") ".-")) ; <- mosrse for a
-     ;;(is (not(= (ASCIIConvert "b") ".-")))
-         )
+     (is (not(= (ASCIIConvert "b") ".-")))
+     ;;(is (= (ASCIIConvert "hello world") ".... . .-.. .-.. --- / .-- --- .-. .-.. -.."))
    )
   )
