@@ -8,18 +8,19 @@
 
 (deftest Ascii-conversion-test
   (testing "Ascii alphabet conversion"
-     (is (= (ASCIIConvert "a") ".-")) ; <- mosrse for a
-     (is (= (ASCIIConvert "1") ".----")) ; <- mosrse for 1
-     (is (not(= (ASCIIConvert "b") ".-")))
-     (is (= (ASCIIConvert "hello world") "....   .   .-..   .-..   ---       .--   ---   .-.   .-..   -.."))
+     (is (= (ASCIIConvert "a") ".-")) ; <- letter check
+     (is (= (ASCIIConvert "1") ".----")) ; <- number check
+     (is (not(= (ASCIIConvert "b") ".-"))) ; <- b is not a
+     (is (= (ASCIIConvert "hello world") "....   .   .-..   .-..   ---       .--   ---   .-.   .-..   -..")) ; space check
+     (is (= (ASCIIConvert "hElLo WoRlD") "....   .   .-..   .-..   ---       .--   ---   .-.   .-..   -..")) ; capital check
    )
   )
 
 (deftest Morse-conversion-test
   (testing "Morse aplhabet conversion"
-    (is (= (MorseConvert "--..") "z"))
-    (is (= (MorseConvert "--..") "z"))
-    (is (not (= (MorseConvert ".-") "z")))
-    (is (= (MorseConvert "....   .   .-..   .-..   ---       .--   ---   .-.   .-..   -..") "hello world"))
+    (is (= (MorseConvert "--..") "z")) ; <- letter check
+    (is (= (MorseConvert "----.") "9")) ; <- number check
+    (is (not (= (MorseConvert ".-") "z"))) ; <- b is not z
+    (is (= (MorseConvert "....   .   .-..   .-..   ---       .--   ---   .-.   .-..   -..") "hello world")) ; space check
     )
   )

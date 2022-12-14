@@ -36,6 +36,7 @@
            (concat morsestr (ConvertMap (subs (str/lower-case input) index (+ index 1))) "   ") ; three space between letters ; return the next index of the sting and the converted ascii value
            ))))))
 (println (ASCIIConvert "abb hi")) ; input string here .-   -...   -...       ....   ..
+(println (ASCIIConvert "AbB Hi")) ; input string here .-   -...   -...       ....   ..
 
 ;; morse to ascii  (.-   -...   -...) -> "abb"
 ;; find the morse block (either the next " " of the end of input) <- split string at
