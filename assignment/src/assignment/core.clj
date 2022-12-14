@@ -57,7 +57,11 @@
                    (recur ; loop it 
                     (subvec mosrsestr 1) ; remove the first item in the vector
                     (concat output (ConvertMap (first mosrsestr)))) ; convert the first item to ascii value and add to string 
-                   ))" ") ; add sapce for word seperation
+                   ))
+               (if (= (count wordstr) 1)
+                 ""
+                 " ")
+               ) ; add sapce for word seperation
        ))))
 (println (MorseConvert ".-   -...   -.-.   -..   .       .       .   .")) ; <- abcde e ee
 (println (MorseConvert ".-   -...   -.-.   -..   .       -...   .   -..")) ; <- abcde bed
