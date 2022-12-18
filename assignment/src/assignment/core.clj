@@ -35,7 +35,7 @@
          (if (= (subs input index (+ index 1)) " ") ; is this or the next value a space
            (concat morsestr "    ") ; convert the space to 4 (since its gets + 3 from the previouse letter to make 7 long)
            (concat morsestr (ConvertMap (subs (str/lower-case input) index (+ index 1))) "   ") ; three space between letters ; return the next index of the sting and the converted ascii value
-           )))))) ; the str/lower-case is un-needed here because of the :pre spec
+)))))) ; the str/lower-case is un-needed here because of the :pre spec
 
 ; (defn AsciiTest [input] <-above alternative options <- not working yet
 ;   (mapv ConvertMap input))
@@ -67,8 +67,7 @@
                    ))
                (if (= (count wordstr) 1)
                  ""
-                 " ")
-               ) ; add sapce for word seperation
+                 " ")) ; add sapce for word seperation
        ))))
 ; (println (MorseConvert ".-   -...   -.-.   -..   .       .       .   .")) ; <- abcde e ee
 ; (println (MorseConvert ".-   -...   -.-.   -..   .       -...   .   -..")) ; <- abcde bed
@@ -91,6 +90,60 @@
 ;; storage options
 ;; record of year {month : "Jan" {daylist ["1" : "12.3" "2" : "3.12"]}} <- easiest manipulation <- try this one
 ;; record of year {day : "1" {monthlist [Jan : "12.3" "Feb" : "5.23"]}} <- easiest input
+
+(defrecord Monthlyweatherdata [Year Month DayList])
+
+(def MonthList ["Jan" "Feb" "Mar" "Arp" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"])
+
+(defn GetDailyData [year monthindex]
+  (loop [datarow year values []]
+    (if (= (count datarow) 0) ; for all 31 data peices
+      values
+      (recur
+       (rest datarow)
+       (conj values ; add the current value to the list
+             (num (Integer. (str/trim ; remove the leading spaces and convert to integer, then to number else I get issues
+              (subs (first datarow) (+ 11 (* 5 monthindex)) (+ 15 (* 5 monthindex))))))))))) ; for each column (11 is the first data column)
+;(println (GetDailyData (str/split (slurp "oneyeardata.txt") #"\r\n") 0))
+
+(defn GetMonthData [year]
+  (loop [monthindex 0 valuedata []]
+    (if (= monthindex 12) ; for all 12 months
+      valuedata
+      (recur
+       (inc monthindex)
+       (conj valuedata
+             (Monthlyweatherdata. ; create the record
+              (Integer. (str/trim (subs (first year) 0 5))) ;find the year by looking at the firs column of the 31 inputs
+              (nth MonthList monthindex) ; ge the month by converting the index to the monthList
+              (GetDailyData year monthindex)))))))
+; (println (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n")))
+
+(defn ReadYearlyColumn []
+  (let [info (partition 31 (str/split (slurp "weatherdata.txt") #"\r\n")) ; split on every line remove the trailling whate space
+        yearvalue (loop [year info values []]
+                    (if (= (count year) 0)
+                      values
+                      (recur
+                       (rest year)
+                       (conj values (GetMonthData (first year))))))]
+    yearvalue) ; output
+  )
+;(println (ReadYearlyColumn))
+
+;(println (str/trim (subs (first (str/split (slurp "oneyeardata.txt") #"\r\n")) 0 5)))
+
+; (defn SplitFile2[] (println (str/split (slurp "partitiontest.txt") #"\r\n ")))
+; (SplitFile2)
+
+; (defn SplitFile [] (println
+;                     (loop [year (partition 31 (str/split (slurp "fiveyeardata.txt") #"\r\n ")) values []]
+;                       (if (= (count year) 0)
+;                         values
+;                         (recur
+;                          (rest year)
+;                          (conj values (str/trim (subs (nth (first year) 0) 0 5))))))))
+;(SplitFile)
 
 ; (defn ReadDayColumn[] (
 ;   let[info (str/split (slurp "oneyeardata.txt") #"\r\n") ; split on every line remove the trailling whate space
@@ -122,65 +175,32 @@
 ;   )
 ; (ReadMonthColumn)
 ; (defn ReadYearlyColumn[] (
-;   let[info (str/split (slurp "oneyeardata.txt") #"\r\n") ; split on every line remove the trailling whate space
-;       yearvalue (loop [monthindex 0 valuedata []]
-;                   (if (= monthindex 12)
-;                     valuedata
-;                     (recur
-;                      (inc monthindex)
-;                      (conj valuedata
-;                            (Monthlyweatherdata.
-;                             1772
-;                             (nth MonthList monthindex)
-;                             (loop [row info values []] ; find dayly data
-;                               (if (= (count row) 0)
-;                                 values
-;                                 (recur
-;                                  (rest row)
-;                                  (conj values (str/trim ;;remove the leading spaces
-;                                                (subs (first row) (+ 11 (* 5 monthindex)) (+ 15 (* 5 monthindex))) ; get the date values
-;                                                )))))))
-;                      )
-;                     ))]
-;   (println yearvalue)) ; output
-;   )
-; (ReadYearlyColumn)
+  ; let[info (str/split (slurp "oneyeardata.txt") #"\r\n") ; split on every line remove the trailling whate space
+  ;     yearvalue (loop [monthindex 0 valuedata []]
+  ;                 (if (= monthindex 12)
+  ;                   valuedata
+  ;                   (recur
+  ;                    (inc monthindex)
+  ;                    (conj valuedata
+  ;                          (Monthlyweatherdata.
+  ;                           1772
+  ;                           (nth MonthList monthindex)
+  ;                           (loop [row info values []] ; find dayly data
+  ;                             (if (= (count row) 0)
+  ;                               values
+  ;                               (recur
+  ;                                (rest row)
+  ;                                (conj values (str/trim ;;remove the leading spaces
+  ;                                              (subs (first row) (+ 11 (* 5 monthindex)) (+ 15 (* 5 monthindex))) ; get the date values
+  ;                                              )))))))
+  ;                    )
+  ;                   ))]
+  ; (println yearvalue)) ; output
+  ; )
 
-(defrecord Monthlyweatherdata [Year Month DayList])
-(def month (Monthlyweatherdata. 1772 "Jan" [1 2 3 4 5]))
-
-(defrecord Yearlyweatherdata [Year MonthData])
-(defrecord MonthlyData [Month DayList])
-
-(def MonthList ["Jan" "Feb" "Mar" "Arp" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"])
-; (def MonthList {1 "Jan" 2 "Feb" 3 "Mar" 4 "Arp" 5 "May" 6 "Jun" 7 "Jul" 8 "Aug" 9 "Sep" 10 "Oct" 11 "Nov" 12 "Dec"})
-(println (nth MonthList 3))
-
-(defn ReadYearlyColumn[] (
-  let[info (str/split (slurp "fiveyeardata.txt") #"\r\n") ; split on every line remove the trailling whate space
-      yearvalue (loop [monthindex 0 valuedata []]
-                  (if (= monthindex 12) ; split by month
-                    valuedata
-                    (recur
-                     (inc monthindex)
-                     (conj valuedata
-                           (Monthlyweatherdata.
-                            ;(str/trim (subs (first row) 0 5))
-                            1772
-                            (nth MonthList monthindex)
-                            (loop [row info values []] ; find dayly data
-                              (if (= (count row) 0)
-                                values
-                                (recur
-                                 (rest row)
-                                 (conj values (str/trim ;;remove the leading spaces
-                                               (subs (first row) (+ 11 (* 5 monthindex)) (+ 15 (* 5 monthindex))) ; get the date values
-                                               )))))))
-                     )
-                    ))]
-  (println yearvalue)) ; output
-  )
-(ReadYearlyColumn)
+; (def month (Monthlyweatherdata. 1772 "Jan" [1 2 3 4 5]))
+; (defrecord Yearlyweatherdata [Year MonthData])
+; (defrecord MonthlyData [Month DayList])
 
 ; Chris said I can manipulate teh data file e.g.add the extra 10 spaces to the 2022 values to make the data semetric and clean
 ; but I MUST mention my change in the recording
@@ -225,26 +245,12 @@
 ;                                    1.21 1.22 1.23 1.24 1.25 1.26 1.27 1.28 1.29 1.30
 ;                                    1.31)))
 
-; (defn ReadDataFile[]
-;   (let [datarow (str/split (slurp "oneyeardata.txt") #"          \n")
-;         createdata (loop [row datarow value Monthlyweatherdata]; 10 spaces followed by new line
-;                      (if (= row empty?)
-;                        (value)
-;                        (recur
-;                         (rest row) ;;get the next row value
-;                         (value (:Year (subs row 5 9)))
-;                         ;;(value (assoc (:Year (subs row 0 4)) (:Month "Jan") (:Daylist (conj value(:Daylist) (subs row 5 9)))))
-;                         )
-;                       ))]
-;   (createdata)) ; return the data
-;   )
-
 ; (defn ReadFile[] (println (slurp "oneyeardata.txt"))) ; reads the whole txt file
 ; (ReadFile)
 ;(defn SplitFile[] (println (str/split (slurp "oneyeardata.txt") #"          "))) ; split on ever space
 ; (SplitFile)
 ; (defn SplitFile[] (println (str/split (slurp "oneyeardata.txt") #"\n"))) ; split on ever space
-(defn SplitFile[] (println (count (str/split (slurp "oneyeardata.txt") #"\r\n ")))) ; split on ever space
+; (defn SplitFile[] (println (count (str/split (slurp "oneyeardata.txt") #"\r\n ")))) ; split on ever space
 ; (SplitFile)
 ; (defn Readlistnumber[] (
 ;   let[info (str/split (slurp "oneyeardata.txt") #"          ") ; split on ever space
@@ -262,15 +268,3 @@
 ;   (println daycolumn)) ; output
 ;   )
 ; (ReadDayColumn)
-; 1772    1   3 
-; 1772   31  
-
-; (defrecord Daylyweatherdata2 [Day Value])
-; (defrecord Monthlyweatherdata2 [Year Month DayList])
-; (def month2 (Monthlyweatherdata2. 1772 "Jan" [(Daylyweatherdata2. 1 5) 
-;                                              (Daylyweatherdata2. 2 4) 
-;                                              (Daylyweatherdata2. 3 3) 
-;                                              (Daylyweatherdata2. 4 2) 
-;                                              (Daylyweatherdata2. 5 1) ]))
-; (println month)
-; (println (str/index-of month "2"))
