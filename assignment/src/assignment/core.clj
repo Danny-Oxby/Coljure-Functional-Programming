@@ -22,9 +22,13 @@
                  "..---" "2" "...--" "3" "....-" "4" "....." "5" "-...." "6"
                  "--..." "7" "---.." "8" "----." "9"}); map the values to their morse or ascii counter parts
 
+
+(s/def ::ASCIIInput (s/and string?
+                           #(re-matches #"^[a-z0-9 ]+$" %)))
+
 (defn ASCIIConvert [input]
-  ; {:pre [(s/valid? ::AsciiValueSpec input)] ; the input must always be a letter or number
-  ;  :post [(s/valid? string? %)]} ; the output must always be a string
+  {:pre [(s/valid? ::ASCIIInput input)] ; the input must always be a letter or number
+   :post [(s/conform string? %)]} ; the output must always be a string
   (loop [index 0 morsestr ""] ; store the current position in the input and the current output string
     (if (= index (count input)) ; if the current index is the same as the input length return the convered string
       (apply str morsestr) ; return the morse string
@@ -41,6 +45,9 @@
 ;   (mapv ConvertMap input))
 ; (println (AsciiTest "abc de"))
 
+; (println (string? (ASCIIConvert "ab")))
+; (println (s/conform ::ASCIIInput "AbB Hi"))
+; (println (ASCIIConvert "ab"))
 ; (println (ASCIIConvert "abb hi")) ; input string here .-   -...   -...       ....   ..
 ; (println (ASCIIConvert "AbB Hi")) ; input string here .-   -...   -...       ....   ..
 
@@ -95,16 +102,16 @@
 
 (def MonthList ["Jan" "Feb" "Mar" "Arp" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"])
 
-(defn GetDailyData [year monthindex]
+(defn GetDailyData [year monthindex] ; conform seq? returned
   (loop [datarow year values []]
     (if (= (count datarow) 0) ; for all 31 data peices
       values
       (recur
        (rest datarow)
        (conj values ; add the current value to the list
-             (num (Integer. (str/trim ; remove the leading spaces and convert to integer, then to number else I get issues
-              (subs (first datarow) (+ 11 (* 5 monthindex)) (+ 15 (* 5 monthindex))))))))))) ; for each column (11 is the first data column)
-;(println (GetDailyData (str/split (slurp "oneyeardata.txt") #"\r\n") 0))
+             (double (/ (Integer. (str/trim ; remove the leading spaces and convert to integer, then to number else I get issues
+                                   (subs (first datarow) (+ 11 (* 5 monthindex)) (+ 15 (* 5 monthindex))))) 10))))))) ; for each column (11 is the first data column)
+; (println (GetDailyData (str/split (slurp "oneyeardata.txt") #"\r\n") 0))
 
 (defn GetMonthData [year]
   (loop [monthindex 0 valuedata []]
@@ -117,7 +124,7 @@
               (Integer. (str/trim (subs (first year) 0 5))) ;find the year by looking at the firs column of the 31 inputs
               (nth MonthList monthindex) ; ge the month by converting the index to the monthList
               (GetDailyData year monthindex)))))))
-; (println (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n")))
+;(println (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n")))
 
 (defn ReadYearlyColumn []
   (let [info (partition 31 (str/split (slurp "weatherdata.txt") #"\r\n")) ; split on every line remove the trailling whate space
@@ -129,7 +136,131 @@
                        (conj values (GetMonthData (first year))))))]
     yearvalue) ; output
   )
-;(println (ReadYearlyColumn))
+; (println (ReadYearlyColumn))
+
+;;;; //////////////////////////////////// Question 2.1 //////////////////////////////////////////
+(defrecord WarmestData [Year Month Day Value])
+
+(defn FindHottestDay [datainput month]
+  (loop [yearlist datainput
+         warmestsofar (WarmestData. 0001 "Jan" 1 -99.9)] ; check every year for the wamests in that month
+    (if (= (count yearlist) 0)
+      warmestsofar ; when no more years to check return
+      (recur
+       (rest yearlist)
+       (let [value (reduce max
+                           (:DayList (nth (first yearlist) month)))] ; dont care about the -99.9 in this method since we find max not avg
+         (if (< (:Value warmestsofar) value) ; if the new value is bigger than the last one update
+           (WarmestData.
+            (:Year (nth (first yearlist) month)) ;year
+            (:Month (nth (first yearlist) month)) ;month
+            (+ (.indexOf (:DayList (nth (first yearlist) month)) value) 1) ;day ; find where the value was in the list +1 for 0 index
+            value) ;value
+           warmestsofar)))))) ; new is smaller keep old value
+
+(defn FindWarmestInMonth [datainput]
+  (loop [monthindex 0 warmestlist []]
+    (if (= monthindex 12) ; for all twelve months
+      warmestlist ; return list once all 12 are found
+      (recur
+       (inc monthindex)
+       (conj warmestlist
+             (FindHottestDay datainput monthindex))))))
+; (println (FindWarmestInMonth (ReadYearlyColumn)))
+; (println (.indexOf (:DayList (nth (first (ReadYearlyColumn)) 0)) 6.2 ) )
+; (println (FindHottestDay (ReadYearlyColumn) 11))
+
+;;;; //////////////////////////////////// Question 2.2 //////////////////////////////////////////
+
+(defrecord YearData [Year Value])
+(defrecord TempData [Warmest Coldest])
+
+(defn FindYearAvg [yearinput]
+  (loop [monthindex 0 currentavg 0 stop false] ; stop is for 2022 when all data is invalid
+    (if (or (= monthindex 12) stop)
+      (float (/ currentavg (if stop
+                             (- monthindex 1)
+                             monthindex)))
+      (let [listval (filter (fn [x] ; add the new value to the current total
+                              (not (= -99.9 x))) ; ignore the invalid values
+                            (:DayList (nth yearinput monthindex)))]
+        (recur ; for every month
+         (inc monthindex)
+         (+ currentavg
+            (if (= listval [])
+              0 ; return 0 if the month has no valid values
+              (/ (reduce + listval) (count listval))))
+         (if (= listval [])
+           true
+           false)))))) ; dividate thie months total with the number of valid days
+; (println (FindYearAvg (GetMonthData (str/split (slurp "lastyeardata.txt") #"\r\n"))))
+
+(defn FindAvgWarmestAndColdestYears [datainput] ; find the average of each year's temp, ignoring -99.9, and sees if its the coldest or warmest year 
+  (loop [yearlist datainput
+         WarmestData (YearData. 0001 -99.9) ; the warmest possible value
+         ColdestData (YearData. 0001 99.9)] ;the coldest possible value
+    (if (= (count yearlist) 0)
+      (TempData. WarmestData ColdestData)
+      (let [year (FindYearAvg (first yearlist))]
+        (recur
+         (rest yearlist)
+         (if (< (:Value WarmestData) year)
+           (YearData. (:Year (first (first yearlist))) year) ; get the year from the jan object of that year
+           WarmestData
+         )
+         (if (> (:Value ColdestData) year)
+           (YearData. (:Year (first (first yearlist))) year) ; get the year from the jan object of that year
+           ColdestData
+         ))))))
+
+(println (FindAvgWarmestAndColdestYears (ReadYearlyColumn)))
+
+;;;; //////////////////////////////////// Question 2.3 //////////////////////////////////////////
+
+
+; (def month (Monthlyweatherdata. 1772 "Jan" [1 2 3 4 5]))
+; (defrecord Yearlyweatherdata [Year MonthData])
+; (defrecord MonthlyData [Month DayList])
+
+; Chris said I can manipulate teh data file e.g.add the extra 10 spaces to the 2022 values to make the data semetric and clean
+; but I MUST mention my change in the recording
+
+
+; (s/def ::AsciiValueSpec #{"a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r"
+;                            "s" "t" "u" "v" "w" "x" "y" "z" "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" " "}) ;only allow number or lowercase letters as valid inputs
+; (s/def ::MorseVAleuSpec #{"." "-" " "}) ; only allow '.''-'' ' as valid inputs
+
+; (s/def ::year number?) ; is the year a number
+; (s/def ::dayvalue number?) ; give me the day
+; ; (s/def ::daylist (s/coll-of ::day :kind (s/map-of ::day int) :distinct true)) ; Store all the days
+; (s/def ::daylist (s/coll-of ::dayvalue :kind seq? :distinct false)) ; Store all the days
+; ;;(s/def ::daylist (s/coll-of ::day :kind map? (s/map-of ::day int) :distinct true)) ; Store all the days
+; (s/def ::datapoint 
+;   (s/keys :req [::year ::month ::daylist]))
+
+; (defn ReadFile[] (println (slurp "oneyeardata.txt"))) ; reads the whole txt file
+; (ReadFile)
+;(defn SplitFile[] (println (str/split (slurp "oneyeardata.txt") #"          "))) ; split on ever space
+; (SplitFile)
+; (defn SplitFile[] (println (str/split (slurp "oneyeardata.txt") #"\n"))) ; split on ever space
+; (defn SplitFile[] (println (count (str/split (slurp "oneyeardata.txt") #"\r\n ")))) ; split on ever space
+; (SplitFile)
+; (defn Readlistnumber[] (
+;   let[info (str/split (slurp "oneyeardata.txt") #"          ") ; split on ever space
+;       number(count info)]
+;   (println number)) ; output
+;   )
+; (Readlistnumber)
+; (defn ReadDayColumn[] (
+;   let[info (str/split (slurp "oneyeardata.txt") #"          ") ; split on ever space
+;       daycolumn (loop [row info]
+;                   (if (= (count row) 0)
+;                     "done"
+;                     (recur
+;                      (rest row))))]
+;   (println daycolumn)) ; output
+;   )
+; (ReadDayColumn)
 
 ;(println (str/trim (subs (first (str/split (slurp "oneyeardata.txt") #"\r\n")) 0 5)))
 
@@ -198,73 +329,13 @@
   ; (println yearvalue)) ; output
   ; )
 
-; (def month (Monthlyweatherdata. 1772 "Jan" [1 2 3 4 5]))
-; (defrecord Yearlyweatherdata [Year MonthData])
-; (defrecord MonthlyData [Month DayList])
-
-; Chris said I can manipulate teh data file e.g.add the extra 10 spaces to the 2022 values to make the data semetric and clean
-; but I MUST mention my change in the recording
-
-
-; (s/def ::AsciiValueSpec #{"a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r"
-;                            "s" "t" "u" "v" "w" "x" "y" "z" "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" " "}) ;only allow number or lowercase letters as valid inputs
-; (s/def ::MorseVAleuSpec #{"." "-" " "}) ; only allow '.''-'' ' as valid inputs
-
-; (s/def ::LetterSpec #{"a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r"
-;                            "s" "t" "u" "v" "w" "x" "y" "z" " "}) ; only allow letters as valid inputs
-; (s/def ::NumberSepc #{"0" "1" "2" "3" "4" "5" "6" "7" "8" "9"}) ; only allow numbers as valid inputs
-; (def RegexAsciiSpec #"^[a-z0-9]$")
-
-; (s/def ::asdf (s/and string?
-;           #(re-matches RegexAsciiSpec %)))
-
-; (println (s/valid? (s/cat :unit ::AsciiValueSpec) "asdfghj"))
-; ;;(println (s/valid? [::AsciiValueSpec] "asdfghj"))
-; (println (s/valid? ::AsciiValueSpec "a"))
-
-; (println (s/valid? ::asdf "asdfghj"))
-; (println (s/valid? ::asdf "a"))
-
-; (s/def ::year number?) ; is the year a number
-; (s/def ::month #{"Jan" "Feb" "Mar" "Apr" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"}) ; what month is it
-; (s/def ::dayvalue number?) ; give me the day
-; ; (s/def ::day #{1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 32 24 25 26 27 28 29 30 31}) ; give me the day
-; ; (s/def ::daylist (s/coll-of ::day :kind (s/map-of ::day int) :distinct true)) ; Store all the days
-; (s/def ::daylist (s/coll-of ::dayvalue :kind seq? :distinct false)) ; Store all the days
-; ;;(s/def ::daylist (s/coll-of ::day :kind map? (s/map-of ::day int) :distinct true)) ; Store all the days
-; (s/def ::datapoint 
-;   (s/keys :req [::year ::month ::daylist]))
-; (defrecord Days [day1 day2 day3 day4 day5 day6 day7 day8 day9 day10 
-;                  day11 day12 day13 day14 day15 day16 day17 day18 day19 day20
-;                  day21 day22 day23 day24 day25 day26 day27 day28 day29 day30 day31])
-; (defrecord Monthlyweatherdata [Year Month Daylist])
-
-; (def JanTest 
-;   (Monthlyweatherdata. 2000 "Jan" (Days. 1.01 1.02 1.03 1.04 1.05 1.06 1.07 1.08 1.09 1.10
-;                                    1.11 1.12 1.13 1.14 1.15 1.16 1.17 1.18 1.19 1.20
-;                                    1.21 1.22 1.23 1.24 1.25 1.26 1.27 1.28 1.29 1.30
-;                                    1.31)))
-
-; (defn ReadFile[] (println (slurp "oneyeardata.txt"))) ; reads the whole txt file
-; (ReadFile)
-;(defn SplitFile[] (println (str/split (slurp "oneyeardata.txt") #"          "))) ; split on ever space
-; (SplitFile)
-; (defn SplitFile[] (println (str/split (slurp "oneyeardata.txt") #"\n"))) ; split on ever space
-; (defn SplitFile[] (println (count (str/split (slurp "oneyeardata.txt") #"\r\n ")))) ; split on ever space
-; (SplitFile)
-; (defn Readlistnumber[] (
-;   let[info (str/split (slurp "oneyeardata.txt") #"          ") ; split on ever space
-;       number(count info)]
-;   (println number)) ; output
-;   )
-; (Readlistnumber)
-; (defn ReadDayColumn[] (
-;   let[info (str/split (slurp "oneyeardata.txt") #"          ") ; split on ever space
-;       daycolumn (loop [row info]
-;                   (if (= (count row) 0)
-;                     "done"
-;                     (recur
-;                      (rest row))))]
-;   (println daycolumn)) ; output
-;   )
-; (ReadDayColumn)
+; (println (/(reduce + (filter (fn [x] ; add the new value to the current total
+;                               (not (= -99.9 x))) ; ignore the invalid values
+;                             (:DayList (nth (GetMonthData (str/split (slurp "lastyeardata.txt") #"\r\n")) 0))))5))
+; (println (float (* (/(reduce + (filter (fn [x] ; add the new value to the current total
+;                               (not (= -99.9 x))) ; ignore the invalid values
+;                             (:DayList (nth (GetMonthData (str/split (slurp "lastyeardata.txt") #"\r\n")) 0)))) 5) 11)))
+; (println (float (* (/ (reduce + (filter (fn [x] ; add the new value to the current total
+;                               (not (= -99.9 x))) ; ignore the invalid values
+;                             (:DayList (nth (GetMonthData (str/split (slurp "lastyeardata.txt") #"\r\n")) 0)))) 5) 12)))
+; (println (float (* 12 7.4)))

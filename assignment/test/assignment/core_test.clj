@@ -9,7 +9,8 @@
      (is (= (ASCIIConvert "1") ".----")) ; <- number check
      (is (not(= (ASCIIConvert "b") ".-"))) ; <- b is not a
      (is (= (ASCIIConvert "hello world") "....   .   .-..   .-..   ---       .--   ---   .-.   .-..   -..")) ; space check
-     (is (= (ASCIIConvert "hElLo WoRlD") "....   .   .-..   .-..   ---       .--   ---   .-.   .-..   -..")) ; capital check
+     ;(is (= (ASCIIConvert "hElLo WoRlD") :clojure.spec.alpha/invalid)) ; capital check
+     ;(is (not (= (ASCIIConvert "hElLo WoRlD") "....   .   .-..   .-..   ---       .--   ---   .-.   .-..   -.."))) ; capital check
    )
   )
 
@@ -22,18 +23,18 @@
     )
   )
 
-(deftest Intermediate-weather-methods
+(deftest Intermediate-weather-methods-test
   (testing "Daily method expected returns"
-    (is (= (GetDailyData (str/split (slurp "oneyeardata.txt") #"\r\n") 0) [32 20 27 27 15 22 25 0 0 45 62 52 25 17 30 20 -18 -13 -18 -10 -6 15 12 5 12 15 0 15 -33 -10 -8])) ; Jan
-    (is (= (GetDailyData (str/split (slurp "oneyeardata.txt") #"\r\n") 4) [87 77 84 96 133 113 106 84 67 59 87 111 116 74 101 137 121 79 92 74 96 111 136 118 131 108 77 116 113 121 108])) ; March
-    (is (= (GetDailyData (str/split (slurp "oneyeardata.txt") #"\r\n") 11) [112 62 60 47 50 42 32 55 62 100 45 67 82 77 70 87 90 60 112 97 67 10 -28 7 -40 -8 5 10 12 15 22])) ; December
+    (is (= (GetDailyData (str/split (slurp "oneyeardata.txt") #"\r\n") 0) [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8])) ; Jan
+    (is (= (GetDailyData (str/split (slurp "oneyeardata.txt") #"\r\n") 4) [8.7 7.7 8.4 9.6 13.3 11.3 10.6 8.4 6.7 5.9 8.7 11.1 11.6 7.4 10.1 13.7 12.1 7.9 9.2 7.4 9.6 11.1 13.6 11.8 13.1 10.8 7.7 11.6 11.3 12.1 10.8])) ; March
+    (is (= (GetDailyData (str/split (slurp "oneyeardata.txt") #"\r\n") 11) [11.2 6.2 6.0 4.7 5.0 4.2 3.2 5.5 6.2 10.0 4.5 6.7 8.2 7.7 7.0 8.7 9.0 6.0 11.2 9.7 6.7 1.0 -2.8 0.7 -4.0 -0.8 0.5 1.0 1.2 1.5 2.2])) ; December
   )
-  (let [Jan1772 (->Monthlyweatherdata 1772 "Jan" [32 20 27 27 15 22 25 0 0 45 62 52 25 17 30 20 -18 -13 -18 -10 -6 15 12 5 12 15 0 15 -33 -10 -8])
-        Dec1772 (->Monthlyweatherdata 1772 "Dec" [112 62 60 47 50 42 32 55 62 100 45 67 82 77 70 87 90 60 112 97 67 10 -28 7 -40 -8 5 10 12 15 22])
-        Jan1782 (->Monthlyweatherdata 1782 "Jan" [24 97 62 102 69 76 70 68 82 20 -12 36 40 58 38 56 19 5 73 89 36 69 104 106 38 33 42 45 17 29 9])
-        Jun1782 (->Monthlyweatherdata 1782 "Jun" [99 87 100 102 125 125 126 159 148 145 127 142 122 147 176 173 161 194 168 176 155 172 162 177 176 201 148 150 160 154 -999])
-        Jan2022 (->Monthlyweatherdata 2022 "Jan" [126 98 86 31 29 13 33 49 47 53 67 35 38 20 17 38 45 20 35 21 11 34 44 36 29 49 78 60 81 40 54])
-        Dec2022 (->Monthlyweatherdata 2022 "Dec" [-999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999 -999])]
+  (let [Jan1772 (->Monthlyweatherdata 1772 "Jan" [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8])
+        Dec1772 (->Monthlyweatherdata 1772 "Dec" [11.2 6.2 6.0 4.7 5.0 4.2 3.2 5.5 6.2 10.0 4.5 6.7 8.2 7.7 7.0 8.7 9.0 6.0 11.2 9.7 6.7 1.0 -2.8 0.7 -4.0 -0.8 0.5 1.0 1.2 1.5 2.2])
+        Jan1782 (->Monthlyweatherdata 1782 "Jan" [2.4 9.7 6.2 10.2 6.9 7.6 7.0 6.8 8.2 2.0 -1.2 3.6 4.0 5.8 3.8 5.6 1.9 0.5 7.3 8.9 3.6 6.9 10.4 10.6 3.8 3.3 4.2 4.5 1.7 2.9 0.9])
+        Jun1782 (->Monthlyweatherdata 1782 "Jun" [9.9 8.7 10.0 10.2 12.5 12.5 12.6 15.9 14.8 14.5 12.7 14.2 12.2 14.7 17.6 17.3 16.1 19.4 16.8 17.6 15.5 17.2 16.2 17.7 17.6 20.1 14.8 15.0 16.0 15.4 -99.9])
+        Jan2022 (->Monthlyweatherdata 2022 "Jan" [12.6 9.8 8.6 3.1 2.9 1.3 3.3 4.9 4.7 5.3 6.7 3.5 3.8 2.0 1.7 3.8 4.5 2.0 3.5 2.1 1.1 3.4 4.4 3.6 2.9 4.9 7.8 6.0 8.1 4.0 5.4])
+        Dec2022 (->Monthlyweatherdata 2022 "Dec" [-99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9 -99.9])]
   (testing "Monthly method expected return"
     (is (= (first (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n"))) Jan1772)) ; check it works with small data
     (is (= (first (GetMonthData (nth (partition 31 (str/split (slurp "weatherdata.txt") #"\r\n")) 0 "year has no data"))) Jan1772)) ; check it works with large data
@@ -50,4 +51,13 @@
       )
   )
 )
-;{:Year 1772, :Month Jan, :DayList [32 20 27 27 15 22 25 0 0 45 62 52 25 17 30 20 -18 -13 -18 -10 -6 15 12 5 12 15 0 15 -33 -10 -8]}
+
+(deftest Find-Warmest-test
+  (let [value (FindWarmestInMonth (ReadYearlyColumn))]
+   (testing "Context of the test assertions"
+    (is (= (first value) (->WarmestData 2022 "Jan" 1 12.6)))
+    (is (= (nth value 5) (->WarmestData 1947 "Jun" 3 23.0)))
+    (is (= (last value) (->WarmestData 2015 "Dec" 19 13.1)))
+     )
+    )
+  )
