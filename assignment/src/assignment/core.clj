@@ -273,15 +273,14 @@
        (conj monthlist (MonthlyTempVariation datainput monthindex (MeanMonthTemp datainput monthindex))))
     ))
   )
-(println (MonthTempData (ReadYearlyColumn)))
+;(println (MonthTempData (ReadYearlyColumn)))
 
 ; (def month (Monthlyweatherdata. 1772 "Jan" [1 2 3 4 5]))
 ; (defrecord Yearlyweatherdata [Year MonthData])
 ; (defrecord MonthlyData [Month DayList])
 
 ; Chris said I can manipulate teh data file e.g.add the extra 10 spaces to the 2022 values to make the data semetric and clean
-; but I MUST mention my change in the recording
-
+; but I MUST mention my change in the recording /\ I did add the spaces and a ending new line
 
 ; (s/def ::AsciiValueSpec #{"a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r"
 ;                            "s" "t" "u" "v" "w" "x" "y" "z" "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" " "}) ;only allow number or lowercase letters as valid inputs
