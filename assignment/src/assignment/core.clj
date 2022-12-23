@@ -124,10 +124,13 @@
               (Integer. (str/trim (subs (first year) 0 5))) ;find the year by looking at the firs column of the 31 inputs
               (nth MonthList monthindex) ; ge the month by converting the index to the monthList
               (GetDailyData year monthindex)))))))
-;(println (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n")))
+; (println (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n")))
 
-(defn ReadYearlyColumn []
-  (let [info (partition 31 (str/split (slurp "weatherdata.txt") #"\r\n")) ; split on every line remove the trailling whate space
+; (defn ReadYearlyColumn []
+;   (let [info (partition 31 (str/split (slurp "weatherdata.txt") #"\r\n")) ; split on every line remove the trailling whate space
+
+(defn ReadYearlyColumn [filename]
+  (let [info (partition 31 (str/split (slurp filename) #"\r\n")) ; split on every line remove the trailling whate space
         yearvalue (loop [year info values []]
                     (if (= (count year) 0)
                       values
@@ -136,7 +139,8 @@
                        (conj values (GetMonthData (first year))))))]
     yearvalue) ; output
   )
-; (println (ReadYearlyColumn))
+; (println (ReadYearlyColumn "weatherdata.txt"))
+; (println (ReadYearlyColumn "fiveyeardata.txt"))
 
 (defn Filter99 [list] ; extracted filter function since it's used in multiple places
   (filter (fn [x] ; add the new value to the current total
@@ -173,9 +177,9 @@
        (inc monthindex)
        (conj warmestlist
              (FindHottestDay datainput monthindex))))))
-; (println (FindWarmestInMonth (ReadYearlyColumn)))
-; (println (.indexOf (:DayList (nth (first (ReadYearlyColumn)) 0)) 6.2 ) )
-; (println (FindHottestDay (ReadYearlyColumn) 11))
+; (println (FindWarmestInMonth (ReadYearlyColumn "weatherdata.txt")))
+; (println (.indexOf (:DayList (nth (first (ReadYearlyColumn "weatherdata.txt")) 0)) 6.2 ) )
+; (println (FindHottestDay (ReadYearlyColumn "weatherdata.txt") 11))
 
 ;;;; //////////////////////////////////// Question 2.2 //////////////////////////////////////////
 
@@ -198,7 +202,14 @@
          (if (= listval [])
            true
            false)))))) ; divide the months total with the number of valid days
+; (println (FindYearAvg (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n"))))
 ; (println (FindYearAvg (GetMonthData (str/split (slurp "lastyeardata.txt") #"\r\n"))))
+; (println (FindYearAvg (nth (ReadYearlyColumn "fiveyeardata.txt") 0))) ; 9.149081
+; (println (FindYearAvg (nth (ReadYearlyColumn "fiveyeardata.txt") 1))) ; 9.24301
+; (println (FindYearAvg (nth (ReadYearlyColumn "fiveyeardata.txt") 2))) ; 9.052168
+; (println (FindYearAvg (nth (ReadYearlyColumn "fiveyeardata.txt") 3))) ; 10.079941
+; (println (FindYearAvg (nth (ReadYearlyColumn "fiveyeardata.txt") 4))) ; 9.00098
+; (println (FindYearAvg (nth (ReadYearlyColumn "fiveyeardata.txt") 5))) ; 9.067841
 
 (defn FindAvgWarmestAndColdestYears [datainput] ; find the average of each year's temp, ignoring -99.9, and sees if its the coldest or warmest year 
   (loop [yearlist datainput
@@ -215,7 +226,7 @@
          (if (> (:Value ColdestData) year)
            (YearData. (:Year (first (first yearlist))) year) ; get the year from the jan object of that year
            ColdestData))))))
-; (println (FindAvgWarmestAndColdestYears (ReadYearlyColumn)))
+; (println (FindAvgWarmestAndColdestYears (ReadYearlyColumn "weatherdata.txt")))
 
 ;;;; //////////////////////////////////// Question 2.3 //////////////////////////////////////////
 
@@ -233,21 +244,16 @@
            (inc invalidmonths)
            invalidmonths ; do nothing is month is valid
            ))))))
-;(println (MeanMonthTemp (ReadYearlyColumn) 11))
+;(println (MeanMonthTemp (ReadYearlyColumn "weatherdata.txt") 11))
 
 (defrecord MonthlyMeanAndVarience [Month Mean Nearest Furthest])
 ;(defrecord YearData [Year Value]) << already exists this is a reminder
-
-; (defn Filter9 [list] ; extracted filter function since it's used in multiple places
-;   (filter (fn [x] ; add the new value to the current total
-;             (not (= -99.9 x))) ; ignore the invalid values
-;           (:Value list)))
 
 (defn MonthlyTempVariation [datainput monthindex targetavg] ; find the closes and farthers temp avg from the target
   (loop [yearlist datainput avgvalues []]
     (let [listval (Filter99 (:DayList (nth (first yearlist) monthindex)))] ; remove the invalid -99.9 from the daylist
       (if (= yearlist []) ; for all of the years
-        ; avgvalues
+        ;avgvalues
         (MonthlyMeanAndVarience.
          (MonthList monthindex)
          targetavg ; code snippit for abs found from https://groups.google.com/g/clojure/c/quEzEM_ndCY
@@ -260,9 +266,9 @@
            (conj avgvalues (YearData.
                             (:Year (first (first yearlist)))
                               (float (/ (reduce + listval) (count listval)))))))))))
-; (println (MonthlyTempVariation (ReadYearlyColumn) 0 (MeanMonthTemp (ReadYearlyColumn) 0)))
-; (println (count (MonthlyTempVariation (ReadYearlyColumn) 0 (MeanMonthTemp (ReadYearlyColumn) 0))))
-; (println  (MeanMonthTemp (ReadYearlyColumn) 11))
+; (println (MonthlyTempVariation (ReadYearlyColumn "fiveyeardata.txt") 11 (MeanMonthTemp (ReadYearlyColumn "fiveyeardata.txt") 11)))
+; (println (count (MonthlyTempVariation (ReadYearlyColumn "weatherdata.txt") 0 (MeanMonthTemp (ReadYearlyColumn "weatherdata.txt") 0))))
+; (println  (MeanMonthTemp (ReadYearlyColumn "weatherdata.txt") 11))
 
 (defn MonthTempData [datainput]
   (loop [monthindex 0 monthlist []]
@@ -273,7 +279,7 @@
        (conj monthlist (MonthlyTempVariation datainput monthindex (MeanMonthTemp datainput monthindex))))
     ))
   )
-;(println (MonthTempData (ReadYearlyColumn)))
+;(println (MonthTempData (ReadYearlyColumn "weatherdata.txt")))
 
 ; (def month (Monthlyweatherdata. 1772 "Jan" [1 2 3 4 5]))
 ; (defrecord Yearlyweatherdata [Year MonthData])
