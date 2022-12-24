@@ -26,30 +26,31 @@
 (s/def ::ASCIIInput (s/and string?
                            #(re-matches #"^[a-z0-9 ]+$" %)))
 
-(defn ASCIIConvert [input]
+(s/def ::MorseInput (s/and string?
+                           #(re-matches #"^[.\- ]+$" %)))
+
+(defn ASCIIConvert [input] ; this methods assumes that any input can't end in a space (since i tmake no gramatical sence)
   {:pre [(s/valid? ::ASCIIInput input)] ; the input must always be a letter or number
-   :post [(s/conform string? %)]} ; the output must always be a string
+   :post [(s/valid? ::MorseInput %)]} ; the output must always be a morse string
   (loop [index 0 morsestr ""] ; store the current position in the input and the current output string
     (if (= index (count input)) ; if the current index is the same as the input length return the convered string
-      (apply str morsestr) ; return the morse string
+      (str/trim (apply str morsestr)) ; return the morse string <- removing the trailing spaces
       (recur ; loop begins here 
        (inc index) ; increase the index for the next char in the string 
-       (if (= (+ index 1) (count input)) ; if is the last item
-         (concat morsestr (ConvertMap (subs (str/lower-case input) index (+ index 1)))) ; dont add the last space
-         (if (= (subs input index (+ index 1)) " ") ; is this or the next value a space
-           (concat morsestr "    ") ; convert the space to 4 (since its gets + 3 from the previouse letter to make 7 long)
-           (concat morsestr (ConvertMap (subs (str/lower-case input) index (+ index 1))) "   ") ; three space between letters ; return the next index of the sting and the converted ascii value
-)))))) ; the str/lower-case is un-needed here because of the :pre spec
+       (if (= (subs input index (+ index 1)) " ") ; is this value a space
+         (concat morsestr "    ") ; convert the space to 4 (since its gets + 3 from the previouse letter to make 7 long)
+         (concat morsestr (ConvertMap (subs input index (+ index 1))) "   ") ; three space between letters ; return the next index of the sting and the converted ascii value
+))))) ; the str/lower-case is un-needed here because of the :pre spec
 
-; (defn AsciiTest [input] <-above alternative options <- not working yet
+; (defn AsciiTest [input] ; <- mapv retuns nulls and the values are side effects <- dosn't do what we want
 ;   (mapv ConvertMap input))
-; (println (AsciiTest "abc de"))
+; (println (AsciiTest "abc"))
 
-; (println (string? (ASCIIConvert "ab")))
-; (println (s/conform ::ASCIIInput "AbB Hi"))
+; (println (s/assert ::ASCIIInput "AbB Hi")) ; why is this valid?
+; (println (s/conform ::ASCIIInput "AbB Hi")) ; why dosn't conform work in pre conditions
 ; (println (ASCIIConvert "ab"))
 ; (println (ASCIIConvert "abb hi")) ; input string here .-   -...   -...       ....   ..
-; (println (ASCIIConvert "AbB Hi")) ; input string here .-   -...   -...       ....   ..
+; (println (ASCIIConvert "AbB Hi")) ; input string here should fail
 
 ;; morse to ascii  (.-   -...   -...) -> "abb"
 ;; find the morse block (either the next " " of the end of input) <- split string at
@@ -57,12 +58,14 @@
 ;; removed used part of the morse blacok (   -...   -...)
 ;; loop with new ascii value;
 (defn MorseConvert [input]
+  {:pre [(s/valid? ::MorseInput input)] ; the input must always be a morse value
+   :post [(s/valid? ::ASCIIInput %)]} ; the output must always be a string letter or number
   (loop [wordstr (str/split input #"       ") ; split the input on every 7/word space, the # begins the regex
          asciistr ""]
     (if (= wordstr [])
       (apply str asciistr)
       (recur
-       (subvec wordstr 1) ; remove the first item in the word vector
+       (rest wordstr) ; remove the first item in the word vector
        (concat asciistr
                (loop [mosrsestr (str/split (first wordstr) #"   ") ; split the input on every 3/letter space, the # begins the regex
                       output ""]
@@ -73,12 +76,12 @@
                     (concat output (ConvertMap (first mosrsestr)))) ; convert the first item to ascii value and add to string 
                    ))
                (if (= (count wordstr) 1)
-                 ""
+                 "" ; dont add a trailing space (for gramatical reasons)
                  " ")) ; add sapce for word seperation
        ))))
 ; (println (MorseConvert ".-   -...   -.-.   -..   .       .       .   .")) ; <- abcde e ee
 ; (println (MorseConvert ".-   -...   -.-.   -..   .       -...   .   -..")) ; <- abcde bed
-
+; (println (MorseConvert "abc")) ; <- should fail
 
 
 ;; weather data notes
@@ -99,19 +102,26 @@
 ;; record of year {day : "1" {monthlist [Jan : "12.3" "Feb" : "5.23"]}} <- easiest input
 
 (defrecord Monthlyweatherdata [Year Month DayList])
-
 (def MonthList ["Jan" "Feb" "Mar" "Arp" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"])
+(s/def ::SYear (s/and integer?
+                      #(< 0001 %)
+                      #(> 9999 %)))
+(s/def ::SMonth string?)
+(s/def ::SDay (s/coll-of double? :kind sequence))
+(s/def ::SWeatherdata
+  (s/keys :req [::SYear ::SMonth ::SDay]))
+(s/def ::SYearWeatherData (s/coll-of ::SWeatherdata)) ; a list of valid weatherdata <-highest leve spec needed for most pre conditions
 
 (defn GetDailyData [year monthindex] ; conform seq? returned
   (loop [datarow year values []]
     (if (= (count datarow) 0) ; for all 31 data peices
-      values
+      (s/conform ::SDay values) ; make sure the retun is a list of doubles
       (recur
        (rest datarow)
        (conj values ; add the current value to the list
              (double (/ (Integer. (str/trim ; remove the leading spaces and convert to integer, then to number else I get issues
                                    (subs (first datarow) (+ 11 (* 5 monthindex)) (+ 15 (* 5 monthindex))))) 10))))))) ; for each column (11 is the first data column)
-; (println (GetDailyData (str/split (slurp "oneyeardata.txt") #"\r\n") 0))
+;(println (GetDailyData (str/split (slurp "oneyeardata.txt") #"\r\n") 0))
 
 (defn GetMonthData [year]
   (loop [monthindex 0 valuedata []]
@@ -121,13 +131,17 @@
        (inc monthindex)
        (conj valuedata
              (Monthlyweatherdata. ; create the record
-              (Integer. (str/trim (subs (first year) 0 5))) ;find the year by looking at the firs column of the 31 inputs
-              (nth MonthList monthindex) ; ge the month by converting the index to the monthList
-              (GetDailyData year monthindex)))))))
+              (s/conform ::SYear (Integer. (str/trim (subs (first year) 0 5)))) ;find the year by looking at the firs column of the 31 inputs
+              (s/conform ::SMonth (nth MonthList monthindex)) ; get the month by converting the index to the monthList
+              (s/conform ::SDay (GetDailyData year monthindex))))))))
 ; (println (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n")))
-
-; (defn ReadYearlyColumn []
-;   (let [info (partition 31 (str/split (slurp "weatherdata.txt") #"\r\n")) ; split on every line remove the trailling whate space
+;(println (s/explain ::YearWeatherData (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n"))))
+            ;  (let [value (Monthlyweatherdata. ; create the record
+            ;   (s/conform ::SYear (Integer. (str/trim (subs (first year) 0 5)))) ;find the year by looking at the firs column of the 31 inputs
+            ;   (s/conform ::SMonth (nth MonthList monthindex)) ; get the month by converting the index to the monthList
+            ;   (s/conform ::SDay (GetDailyData year monthindex)))]
+            ;    (s/explain ::SYearWeatherData {::SYear (:Year value) ::SMonth (:Month value) ::SDay (:DayList value)})
+            ;    )
 
 (defn ReadYearlyColumn [filename]
   (let [info (partition 31 (str/split (slurp filename) #"\r\n")) ; split on every line remove the trailling whate space
@@ -143,6 +157,7 @@
 ; (println (ReadYearlyColumn "fiveyeardata.txt"))
 
 (defn Filter99 [list] ; extracted filter function since it's used in multiple places
+  {:pre [(s/valid? ::SDay list)]} ; only pass in a list of days
   (filter (fn [x] ; add the new value to the current total
             (not (= -99.9 x))) ; ignore the invalid values
           list))
@@ -265,7 +280,7 @@
            avgvalues ; if the list has no valid values dont add it to the list
            (conj avgvalues (YearData.
                             (:Year (first (first yearlist)))
-                              (float (/ (reduce + listval) (count listval)))))))))))
+                            (float (/ (reduce + listval) (count listval)))))))))))
 ; (println (MonthlyTempVariation (ReadYearlyColumn "fiveyeardata.txt") 11 (MeanMonthTemp (ReadYearlyColumn "fiveyeardata.txt") 11)))
 ; (println (count (MonthlyTempVariation (ReadYearlyColumn "weatherdata.txt") 0 (MeanMonthTemp (ReadYearlyColumn "weatherdata.txt") 0))))
 ; (println  (MeanMonthTemp (ReadYearlyColumn "weatherdata.txt") 11))
@@ -276,21 +291,11 @@
       monthlist
       (recur
        (inc monthindex)
-       (conj monthlist (MonthlyTempVariation datainput monthindex (MeanMonthTemp datainput monthindex))))
-    ))
-  )
+       (conj monthlist (MonthlyTempVariation datainput monthindex (MeanMonthTemp datainput monthindex)))))))
 ;(println (MonthTempData (ReadYearlyColumn "weatherdata.txt")))
-
-; (def month (Monthlyweatherdata. 1772 "Jan" [1 2 3 4 5]))
-; (defrecord Yearlyweatherdata [Year MonthData])
-; (defrecord MonthlyData [Month DayList])
 
 ; Chris said I can manipulate teh data file e.g.add the extra 10 spaces to the 2022 values to make the data semetric and clean
 ; but I MUST mention my change in the recording /\ I did add the spaces and a ending new line
-
-; (s/def ::AsciiValueSpec #{"a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o" "p" "q" "r"
-;                            "s" "t" "u" "v" "w" "x" "y" "z" "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" " "}) ;only allow number or lowercase letters as valid inputs
-; (s/def ::MorseVAleuSpec #{"." "-" " "}) ; only allow '.''-'' ' as valid inputs
 
 ; (s/def ::year number?) ; is the year a number
 ; (s/def ::dayvalue number?) ; give me the day
@@ -299,6 +304,25 @@
 ; ;;(s/def ::daylist (s/coll-of ::day :kind map? (s/map-of ::day int) :distinct true)) ; Store all the days
 ; (s/def ::datapoint 
 ;   (s/keys :req [::year ::month ::daylist]))
+
+; version where trailing spaces are allowed 
+; (defn ASCIIConvert [input] ; this methods assumes that any input can't end in a space (since i tmake no gramatical sence)
+;   {:pre [(s/valid? ::ASCIIInput input)] ; the input must always be a letter or number
+;    :post [(s/valid? ::MorseInput %)]} ; the output must always be a morse string
+;   (loop [index 0 morsestr ""] ; store the current position in the input and the current output string
+;     (if (= index (count input)) ; if the current index is the same as the input length return the convered string
+;       (apply str morsestr) ; return the morse string 
+;       (recur ; loop begins here 
+;        (inc index) ; increase the index for the next char in the string 
+;        (if (= (+ index 1) (count input)) ; if is the last item
+;          (concat morsestr (ConvertMap (subs input index (+ index 1)))) ; dont add the last space
+;          (if (= (subs input index (+ index 1)) " ") ; is this value a space
+;            (concat morsestr "    ") ; convert the space to 4 (since its gets + 3 from the previouse letter to make 7 long)
+;            (concat morsestr (ConvertMap (subs input index (+ index 1))) "   ") ; three space between letters ; return the next index of the sting and the converted ascii value
+; )))))) ; the str/lower-case is un-needed here because of the :pre spec
+
+; (defn ReadYearlyColumn []
+;   (let [info (partition 31 (str/split (slurp "weatherdata.txt") #"\r\n")) ; split on every line remove the trailling whate space
 
 ; (defn ReadFile[] (println (slurp "oneyeardata.txt"))) ; reads the whole txt file
 ; (ReadFile)

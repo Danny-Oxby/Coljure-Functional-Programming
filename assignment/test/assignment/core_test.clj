@@ -9,7 +9,7 @@
      (is (= (ASCIIConvert "1") ".----")) ; <- number check
      (is (not(= (ASCIIConvert "b") ".-"))) ; <- b is not a
      (is (= (ASCIIConvert "hello world") "....   .   .-..   .-..   ---       .--   ---   .-.   .-..   -..")) ; space check
-     ;(is (= (ASCIIConvert "hElLo WoRlD") :clojure.spec.alpha/invalid)) ; capital check
+     (is (thrown? java.lang.AssertionError (ASCIIConvert "hElLo WoRlD"))) ; capital check
      ;(is (not (= (ASCIIConvert "hElLo WoRlD") "....   .   .-..   .-..   ---       .--   ---   .-.   .-..   -.."))) ; capital check
    )
   )
@@ -19,6 +19,7 @@
     (is (= (MorseConvert "--..") "z")) ; <- letter check
     (is (= (MorseConvert "----.") "9")) ; <- number check
     (is (not (= (MorseConvert ".-") "z"))) ; <- b is not z
+    (is (thrown? java.lang.AssertionError (MorseConvert "abc"))) ; <- b is not z
     (is (= (MorseConvert "....   .   .-..   .-..   ---       .--   ---   .-.   .-..   -..") "hello world")) ; space check
     )
   )
