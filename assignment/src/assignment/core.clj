@@ -99,6 +99,7 @@
 
 (defrecord Monthlyweatherdata [Year Month DayList])
 (def MonthList ["Jan" "Feb" "Mar" "Arp" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"])
+;; My specs use a matching name and the req-un to allow for the (conform (-> record)) method set to work
 (s/def ::Year (s/and integer?
                       #(< 0001 %)
                       #(> 9999 %)))
