@@ -42,10 +42,6 @@
          (concat morsestr (ConvertMap (subs input index (+ index 1))) "   ") ; three space between letters ; return the next index of the sting and the converted ascii value
 ))))) ; the str/lower-case is un-needed here because of the :pre spec
 
-; (defn AsciiTest [input] ; <- mapv retuns nulls and the values are side effects <- dosn't do what we want
-;   (mapv ConvertMap input))
-; (println (AsciiTest "abc"))
-
 ; (println (s/assert ::ASCIIInput "AbB Hi")) ; why is this valid?
 ; (println (s/conform ::ASCIIInput "AbB Hi")) ; why dosn't conform work in pre conditions
 ; (println (ASCIIConvert "ab"))
@@ -135,13 +131,19 @@
               (s/conform ::SMonth (nth MonthList monthindex)) ; get the month by converting the index to the monthList
               (s/conform ::SDay (GetDailyData year monthindex))))))))
 ; (println (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n")))
-;(println (s/explain ::YearWeatherData (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n"))))
-            ;  (let [value (Monthlyweatherdata. ; create the record
-            ;   (s/conform ::SYear (Integer. (str/trim (subs (first year) 0 5)))) ;find the year by looking at the firs column of the 31 inputs
-            ;   (s/conform ::SMonth (nth MonthList monthindex)) ; get the month by converting the index to the monthList
-            ;   (s/conform ::SDay (GetDailyData year monthindex)))]
-            ;    (s/explain ::SYearWeatherData {::SYear (:Year value) ::SMonth (:Month value) ::SDay (:DayList value)})
-            ;    )
+
+; (println (s/conform ::SWeatherdata {::SYear 1772 
+;                                     ::SMonth "Jan" 
+;                                     ::SDay [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8]}))
+
+(println (let [example (Monthlyweatherdata.
+                        1772
+                        "Jan"
+                        [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8])]
+           (s/conform ::SWeatherdata {::SYear (:Year example)
+                                          ::SMonth (:Month example)
+                                          ::SDay (:Day example)})
+           ))
 
 (defn ReadYearlyColumn [filename]
   (let [info (partition 31 (str/split (slurp filename) #"\r\n")) ; split on every line remove the trailling whate space
@@ -431,3 +433,14 @@
 ;                 [(YearData. 2022 3.5) (YearData. 1982 3.5) (YearData. 1876 -0.42)]))
 ; (println (apply min-key #(abs (- % 3.457062))
 ;                 [(YearData. 2022 3.5) (YearData. 1982 3.5) (YearData. 1876 -0.42)]))
+
+; (def ConvertMap2 {"a" ".-" "b" "-..." "c" "-.-." "d" "-.." "e" "." ;; ascii values here
+;                  "f" "..-." "g" "--." "h" "...." "i" ".." "j" ".---" "k" "-.-"
+;                  "l" ".-.." "m" "--" "n" "-." "o" "---" "p" ".--." "q" "--.-"
+;                  "r" ".-." "s" "..." "t" "-" "u" "..-" "v" "...-" "w" ".--"
+;                  "x" "-..-" "y" "-.--" "z" "--.." "0" "-----" "1" ".----"
+;                  "2" "..---" "3" "...--" "4" "....-" "5" "....." "6" "-...."
+;                  "7" "--..." "8" "---.." "9" "----." " " "    "})
+; (defn AsciiTest [input] ; <- mapv retuns nulls and the values are side effects <- dosn't do what we want
+;   (mapv #(concat (ConvertMap2 %) "   ") input))
+; (println (AsciiTest "abc"))
