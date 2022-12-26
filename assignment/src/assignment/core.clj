@@ -111,7 +111,7 @@
 (defn GetDailyData [year monthindex] ; conform seq? returned
   (loop [datarow year values []]
     (if (= (count datarow) 0) ; for all 31 data peices
-      (s/conform ::SDay values) ; make sure the retun is a list of doubles
+      (s/conform ::SDay values) ; make sure the return is a list of doubles
       (recur
        (rest datarow)
        (conj values ; add the current value to the list
@@ -134,20 +134,36 @@
                                           ::SMonth (:Month data)
                                           ::SDay (:DayList data)}))
              )))))
-(println (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n")))
+; (println (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n")))
 
 ; (println (s/conform ::SWeatherdata {::SYear 1772 
 ;                                     ::SMonth "Jan" 
 ;                                     ::SDay [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8]}))
-
-; (println (let [example (Monthlyweatherdata.
+; (println (s/explain ::SWeatherdata (->Monthlyweatherdata ; <-why does this not work but above does?
 ;                         1772
 ;                         "Jan"
-;                         [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8])]
-;            (s/conform ::SWeatherdata {::SYear (:Year example)
-;                                           ::SMonth (:Month example)
-;                                           ::SDay (:DayList example)})
+;                         [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8])
 ;            ))
+
+; (defrecord Simplerec [num str])
+; (s/def ::num number?)
+; (s/def ::str string?)
+; (s/def ::Simplerec (s/keys :req-un [::num ::str]))
+; (s/def ::SimpleColl (s/coll-of ::Simplerec))
+
+; (println (let [value (Simplerec. 1 "a")]
+;            (s/conform ::Simplerec {::num (:value value)
+;                                          ::str (:letter value)}))       
+; )
+
+; (println (s/explain ::Simplerec {:num 123 :str "abs"}))
+; (println (s/explain ::Simplerec (->Simplerec 123 "abs")))
+
+; (println (let [value (SimpleColl. [(Simplerec. 1 "a")
+;                                    (Simplerec. 3 "c")
+;                                    (Simplerec. 2 "b")])]
+;            (s/conform ::SimpleColl (::Simplerec value)
+;                       )))
 
 (defn ReadYearlyColumn [filename]
   (let [info (partition 31 (str/split (slurp filename) #"\r\n")) ; split on every line remove the trailling whate space
@@ -200,7 +216,7 @@
              (FindHottestDay datainput monthindex))))))
 ; (println (FindWarmestInMonth (ReadYearlyColumn "weatherdata.txt")))
 ; (println (.indexOf (:DayList (nth (first (ReadYearlyColumn "weatherdata.txt")) 0)) 6.2 ) )
-; (println (FindHottestDay (ReadYearlyColumn "weatherdata.txt") 11))
+(println (FindHottestDay (ReadYearlyColumn "weatherdata.txt") 11))
 
 ;;;; //////////////////////////////////// Question 2.2 //////////////////////////////////////////
 
