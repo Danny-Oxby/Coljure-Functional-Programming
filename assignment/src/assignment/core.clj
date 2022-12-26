@@ -107,7 +107,7 @@
 (s/def ::DayList (s/coll-of double? :kind sequence))
 (s/def ::Monthlyweatherdata
   (s/keys :req-un [::Year ::Month ::DayList]))
-(s/def ::SYearWeatherData (s/coll-of ::Monthlyweatherdata)) ; a list of valid weatherdata <-highest leve spec needed for most pre conditions
+(s/def ::YearWeatherData (s/coll-of ::Monthlyweatherdata)) ; a list of valid weatherdata <-highest leve spec needed for most pre conditions
 
 (defn GetDailyData [year monthindex] ; conform seq? returned
   (loop [datarow year values []]
@@ -121,6 +121,7 @@
 ;(println (GetDailyData (str/split (slurp "oneyeardata.txt") #"\r\n") 0))
 
 (defn GetMonthData [year]
+  {:post [(s/conform ::YearWeatherData %)]}
   (loop [monthindex 0 valuedata []]
     (if (= monthindex 12) ; for all 12 months
       valuedata
@@ -132,27 +133,20 @@
               (nth MonthList monthindex) ; get the month by converting the index to the monthList
               (GetDailyData year monthindex)))
              )))))
-            ;  (let [data (Monthlyweatherdata. ; create the record ,- this version breaks the weather tests later
-            ;   (Integer. (str/trim (subs (first year) 0 5))) ;find the year by looking at the firs column of the 31 inputs
-            ;   (nth MonthList monthindex) ; get the month by converting the index to the monthList
-            ;   (GetDailyData year monthindex))]
-            ;        (s/conform ::Monthlyweatherdata {::Year (:Year data)
-            ;                               ::Month (:Month data)
-            ;                               ::DayList (:DayList data)})
-            ;  data)
-            ; )))))
+
 ; (println (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n")))
 
 ; (println (s/conform ::SWeatherdata {::SYear 1772 
 ;                                     ::SMonth "Jan" 
 ;                                     ::SDay [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8]}))
-; (println (s/explain ::SWeatherdata (->Monthlyweatherdata ; <-why does this not work but above does?
+; (println (s/explain ::SWeatherdata (->Monthlyweatherdata ; <-why does this not work but above does? the req needed to match the value names?
 ;                         1772
 ;                         "Jan"
 ;                         [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8])
 ;            ))
 
 (defrecord Simplerec [num str])
+(defrecord SimpleColl [Simplerec])
 (s/def ::num number?)
 (s/def ::str string?)
 (s/def ::Simplerec (s/keys :req-un [::num ::str]))
@@ -165,12 +159,16 @@
 
 ; (println (s/conform ::Simplerec {:num 123 :str "abs"}))
 ; (println (s/conform ::Simplerec (->Simplerec 123 "abs")))
-
-; (println (let [value (SimpleColl. [(Simplerec. 1 "a")
-;                                    (Simplerec. 3 "c")
-;                                    (Simplerec. 2 "b")])]
-;            (s/conform ::SimpleColl (::Simplerec value)
-;                       )))
+; (println (let [values [(Simplerec. 1 "a")
+;                        (Simplerec. 3 "c")
+;                        (Simplerec. 2 "b")]]
+;            (s/conform ::Simplerec (last values)))
+; )
+; (println (let [values [(Simplerec. 1 "a")
+;                        (Simplerec. 3 "c")
+;                        (Simplerec. 2 "b")]]
+;            (s/conform ::SimpleColl values))
+; )
 
 (defn ReadYearlyColumn [filename]
   (let [info (partition 31 (str/split (slurp filename) #"\r\n")) ; split on every line remove the trailling whate space
@@ -179,7 +177,8 @@
                       values
                       (recur
                        (rest year)
-                       (conj values (GetMonthData (first year))))))]
+                       (conj values (s/conform ::YearWeatherData 
+                             (GetMonthData (first year)))))))]
     yearvalue) ; output
   )
 ; (println (ReadYearlyColumn "weatherdata.txt"))
