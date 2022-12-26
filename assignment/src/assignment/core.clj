@@ -99,19 +99,19 @@
 
 (defrecord Monthlyweatherdata [Year Month DayList])
 (def MonthList ["Jan" "Feb" "Mar" "Arp" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"])
-(s/def ::SYear (s/and integer?
+(s/def ::Year (s/and integer?
                       #(< 0001 %)
                       #(> 9999 %)))
-(s/def ::SMonth string?)
-(s/def ::SDay (s/coll-of double? :kind sequence))
-(s/def ::SWeatherdata
-  (s/keys :req [::SYear ::SMonth ::SDay]))
-(s/def ::SYearWeatherData (s/coll-of ::SWeatherdata)) ; a list of valid weatherdata <-highest leve spec needed for most pre conditions
+(s/def ::Month string?)
+(s/def ::DayList (s/coll-of double? :kind sequence))
+(s/def ::Monthlyweatherdata
+  (s/keys :req-un [::Year ::Month ::DayList]))
+(s/def ::SYearWeatherData (s/coll-of ::Monthlyweatherdata)) ; a list of valid weatherdata <-highest leve spec needed for most pre conditions
 
 (defn GetDailyData [year monthindex] ; conform seq? returned
   (loop [datarow year values []]
     (if (= (count datarow) 0) ; for all 31 data peices
-      (s/conform ::SDay values) ; make sure the return is a list of doubles
+      (s/conform ::DayList values) ; make sure the return is a list of doubles
       (recur
        (rest datarow)
        (conj values ; add the current value to the list
@@ -126,14 +126,20 @@
       (recur
        (inc monthindex)
        (conj valuedata
-             (let [data (Monthlyweatherdata. ; create the record
+             (s/conform ::Monthlyweatherdata (->Monthlyweatherdata ; create the record
               (Integer. (str/trim (subs (first year) 0 5))) ;find the year by looking at the firs column of the 31 inputs
               (nth MonthList monthindex) ; get the month by converting the index to the monthList
-              (GetDailyData year monthindex))]
-                   (s/conform ::SWeatherdata {::SYear (:Year data)
-                                          ::SMonth (:Month data)
-                                          ::SDay (:DayList data)}))
+              (GetDailyData year monthindex)))
              )))))
+            ;  (let [data (Monthlyweatherdata. ; create the record ,- this version breaks the weather tests later
+            ;   (Integer. (str/trim (subs (first year) 0 5))) ;find the year by looking at the firs column of the 31 inputs
+            ;   (nth MonthList monthindex) ; get the month by converting the index to the monthList
+            ;   (GetDailyData year monthindex))]
+            ;        (s/conform ::Monthlyweatherdata {::Year (:Year data)
+            ;                               ::Month (:Month data)
+            ;                               ::DayList (:DayList data)})
+            ;  data)
+            ; )))))
 ; (println (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n")))
 
 ; (println (s/conform ::SWeatherdata {::SYear 1772 
@@ -145,19 +151,19 @@
 ;                         [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8])
 ;            ))
 
-; (defrecord Simplerec [num str])
-; (s/def ::num number?)
-; (s/def ::str string?)
-; (s/def ::Simplerec (s/keys :req-un [::num ::str]))
-; (s/def ::SimpleColl (s/coll-of ::Simplerec))
+(defrecord Simplerec [num str])
+(s/def ::num number?)
+(s/def ::str string?)
+(s/def ::Simplerec (s/keys :req-un [::num ::str]))
+(s/def ::SimpleColl (s/coll-of ::Simplerec))
 
 ; (println (let [value (Simplerec. 1 "a")]
 ;            (s/conform ::Simplerec {::num (:value value)
 ;                                          ::str (:letter value)}))       
 ; )
 
-; (println (s/explain ::Simplerec {:num 123 :str "abs"}))
-; (println (s/explain ::Simplerec (->Simplerec 123 "abs")))
+; (println (s/conform ::Simplerec {:num 123 :str "abs"}))
+; (println (s/conform ::Simplerec (->Simplerec 123 "abs")))
 
 ; (println (let [value (SimpleColl. [(Simplerec. 1 "a")
 ;                                    (Simplerec. 3 "c")
@@ -179,7 +185,7 @@
 ; (println (ReadYearlyColumn "fiveyeardata.txt"))
 
 (defn Filter99 [list] ; extracted filter function since it's used in multiple places
-  {:pre [(s/valid? ::SDay list)]} ; only pass in a list of days
+  {:pre [(s/valid? ::DayList list)]} ; only pass in a list of days
   (filter (fn [x] ; add the new value to the current total
             (not (= -99.9 x))) ; ignore the invalid values
           list))
@@ -216,7 +222,7 @@
              (FindHottestDay datainput monthindex))))))
 ; (println (FindWarmestInMonth (ReadYearlyColumn "weatherdata.txt")))
 ; (println (.indexOf (:DayList (nth (first (ReadYearlyColumn "weatherdata.txt")) 0)) 6.2 ) )
-(println (FindHottestDay (ReadYearlyColumn "weatherdata.txt") 11))
+; (println (FindHottestDay (ReadYearlyColumn "weatherdata.txt") 11))
 
 ;;;; //////////////////////////////////// Question 2.2 //////////////////////////////////////////
 
@@ -319,13 +325,6 @@
 ; Chris said I can manipulate teh data file e.g.add the extra 10 spaces to the 2022 values to make the data semetric and clean
 ; but I MUST mention my change in the recording /\ I did add the spaces and a ending new line
 
-; (s/def ::year number?) ; is the year a number
-; (s/def ::dayvalue number?) ; give me the day
-; ; (s/def ::daylist (s/coll-of ::day :kind (s/map-of ::day int) :distinct true)) ; Store all the days
-; (s/def ::daylist (s/coll-of ::dayvalue :kind seq? :distinct false)) ; Store all the days
-; ;;(s/def ::daylist (s/coll-of ::day :kind map? (s/map-of ::day int) :distinct true)) ; Store all the days
-; (s/def ::datapoint 
-;   (s/keys :req [::year ::month ::daylist]))
 
 ; version where trailing spaces are allowed 
 ; (defn ASCIIConvert [input] ; this methods assumes that any input can't end in a space (since i tmake no gramatical sence)
