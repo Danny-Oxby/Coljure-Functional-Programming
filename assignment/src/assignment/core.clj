@@ -111,7 +111,7 @@
 (s/def ::ListofYearWeatherData (s/coll-of ::YearWeatherData)) ; a list of valid YearWeatherData <-highest leve spec needed for most pre conditions
 
 (defn GetDailyData [year monthindex] ; conform seq? returned
-  {:pre [(s/conform number? monthindex)]}
+  {:pre [(s/valid? number? monthindex)]}
   (loop [datarow year values []]
     (if (= (count datarow) 0) ; for all 31 data peices
       (s/conform ::DayList values) ; make sure the return is a list of doubles
@@ -123,7 +123,7 @@
 ;(println (GetDailyData (str/split (slurp "oneyeardata.txt") #"\r\n") 0))
 
 (defn GetMonthData [year]
-  {:post [(s/conform ::YearWeatherData %)]}
+  {:post [(s/valid? ::YearWeatherData %)]}
   (loop [monthindex 0 valuedata []]
     (if (= monthindex 12) ; for all 12 months
       valuedata
@@ -139,7 +139,7 @@
 ; (println (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n")))
 
 (defn ReadYearlyColumn [filename]
-  {:post [(s/conform ::ListofYearWeatherData %)]}
+  {:post [(s/valid? ::ListofYearWeatherData %)]}
   (let [info (partition 31 (str/split (slurp filename) #"\r\n")) ; split on every line remove the trailling whate space
         yearvalue (loop [year info values []]
                     (if (= (count year) 0)
@@ -163,12 +163,20 @@
 
 ;;;; //////////////////////////////////// Question 2.1 //////////////////////////////////////////
 (defrecord WarmestData [Year Month Day Value])
+(s/def ::Day number?)
+(s/def ::Value number?)
+(s/def ::WarmestData
+  (s/keys :req-un [::Year ::Month ::Day ::Value]))
+(s/def ::ListofWarmestData (s/coll-of ::WarmestData))
 
 (defn FindHottestDay [datainput month]
+  {:pre [(s/valid? ::ListofYearWeatherData datainput) ; is input the correct format
+         (s/valid? number? month)] ; is the month value a number
+   :post [(s/conform ::WarmestData %)]} ; is the return the correct format
   (loop [yearlist datainput
          warmestsofar (WarmestData. 0001 "Jan" 1 -99.9)] ; check every year for the wamests in that month
     (if (= (count yearlist) 0)
-      warmestsofar ; when no more years to check return
+      (s/conform ::WarmestData warmestsofar) ; when no more years to check return
       (recur
        (rest yearlist)
        (let [value (reduce max
@@ -182,13 +190,16 @@
            warmestsofar)))))) ; new is smaller keep old value
 
 (defn FindWarmestInMonth [datainput]
+  {:pre [(s/valid? ::ListofYearWeatherData datainput)]
+   :post [(s/valid? ::ListofWarmestData %)]}
   (loop [monthindex 0 warmestlist []]
     (if (= monthindex 12) ; for all twelve months
-      warmestlist ; return list once all 12 are found
+      (s/conform ::ListofWarmestData warmestlist) ; return list once all 12 are found
       (recur
        (inc monthindex)
        (conj warmestlist
              (FindHottestDay datainput monthindex))))))
+; (println (FindWarmestInMonth [1 2 3 4 5]))
 ; (println (FindWarmestInMonth (ReadYearlyColumn "weatherdata.txt")))
 ; (println (.indexOf (:DayList (nth (first (ReadYearlyColumn "weatherdata.txt")) 0)) 6.2 ) )
 ; (println (FindHottestDay (ReadYearlyColumn "weatherdata.txt") 11))
@@ -196,14 +207,22 @@
 ;;;; //////////////////////////////////// Question 2.2 //////////////////////////////////////////
 
 (defrecord YearData [Year Value])
+(s/def ::YearData 
+  (s/keys :req-un [::Year ::Value]))
 (defrecord TempData [Warmest Coldest])
+(s/def ::Warmest ::YearData)
+(s/def ::Coldest ::YearData)
+(s/def ::TempData
+  (s/keys :req-un [::Warmest ::Coldest]))
 
 (defn FindYearAvg [yearinput]
+  {:pre [(s/valid? ::YearWeatherData yearinput)]
+   :post [(s/valid? ::Value %)]}
   (loop [monthindex 0 currentavg 0 stop false] ; stop is for 2022 when all data is invalid
     (if (or (= monthindex 12) stop)
-      (float (/ currentavg (if stop
+      (s/conform ::Value (float (/ currentavg (if stop
                              (- monthindex 1)
-                             monthindex)))
+                             monthindex))))
       (let [listval (Filter99 (:DayList (nth yearinput monthindex)))]
         (recur ; for every month
          (inc monthindex)
@@ -224,11 +243,13 @@
 ; (println (FindYearAvg (nth (ReadYearlyColumn "fiveyeardata.txt") 5))) ; 9.067841
 
 (defn FindAvgWarmestAndColdestYears [datainput] ; find the average of each year's temp, ignoring -99.9, and sees if its the coldest or warmest year 
+    {:pre [(s/valid? ::ListofYearWeatherData datainput)]
+   :post [(s/valid? ::TempData %)]}
   (loop [yearlist datainput
          WarmestData (YearData. 0001 -99.9) ; the warmest possible value
          ColdestData (YearData. 0001 99.9)] ;the coldest possible value
     (if (= (count yearlist) 0)
-      (TempData. WarmestData ColdestData)
+      (s/conform ::TempData (->TempData WarmestData ColdestData))
       (let [year (FindYearAvg (first yearlist))]
         (recur
          (rest yearlist)
@@ -259,6 +280,11 @@
 ;(println (MeanMonthTemp (ReadYearlyColumn "weatherdata.txt") 11))
 
 (defrecord MonthlyMeanAndVarience [Month Mean Nearest Furthest])
+(s/def ::Mean ::YearData)
+(s/def ::Nearest ::YearData) ; match the names so that the conform check is quicker
+(s/def ::Furthest ::YearData)
+(s/def ::MonthlyMeanAndVarience
+  (s/keys :req-un[::Month ::Mean ::Nearest ::Furthest]))
 ;(defrecord YearData [Year Value]) << already exists this is a reminder
 
 (defn MonthlyTempVariation [datainput monthindex targetavg] ; find the closes and farthers temp avg from the target
