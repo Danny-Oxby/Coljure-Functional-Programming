@@ -264,9 +264,12 @@
 ;;;; //////////////////////////////////// Question 2.3 //////////////////////////////////////////
 
 (defn MeanMonthTemp [datainput monthindex] ; find the mean temperature for all "Jan" in a year
+  {:pre [(s/valid? ::ListofYearWeatherData datainput)
+         (s/valid? number? monthindex)]
+   :post [(s/valid? ::Value %)]}
   (loop [yearlist datainput, avgtotal 0, invalidmonths 0] ; invalid months count any month where the list value is []
     (if (= yearlist []) ; for all of the years
-      (float (/ avgtotal (- (count datainput) invalidmonths))) ; return list once all 12 are found
+      (s/conform ::Value (float (/ avgtotal (- (count datainput) invalidmonths)))) ; return list once all 12 are found
       (let [listval (Filter99 (:DayList (nth (first yearlist) monthindex)))]
         (recur
          (rest yearlist)
@@ -277,26 +280,31 @@
            (inc invalidmonths)
            invalidmonths ; do nothing is month is valid
            ))))))
-;(println (MeanMonthTemp (ReadYearlyColumn "weatherdata.txt") 11))
+; (println (MeanMonthTemp (ReadYearlyColumn "weatherdata.txt") 11))
 
 (defrecord MonthlyMeanAndVarience [Month Mean Nearest Furthest])
-(s/def ::Mean ::YearData)
+(s/def ::Mean ::Value)
 (s/def ::Nearest ::YearData) ; match the names so that the conform check is quicker
 (s/def ::Furthest ::YearData)
 (s/def ::MonthlyMeanAndVarience
   (s/keys :req-un[::Month ::Mean ::Nearest ::Furthest]))
+(s/def ::ListofMonthlyMeanAndVarience (s/coll-of ::MonthlyMeanAndVarience))
 ;(defrecord YearData [Year Value]) << already exists this is a reminder
 
 (defn MonthlyTempVariation [datainput monthindex targetavg] ; find the closes and farthers temp avg from the target
+    {:pre [(s/valid? ::ListofYearWeatherData datainput)
+           (s/valid? number? monthindex)
+           (s/valid? ::Value targetavg)]     
+     :post [(s/valid? ::MonthlyMeanAndVarience %)]}
   (loop [yearlist datainput avgvalues []]
     (let [listval (Filter99 (:DayList (nth (first yearlist) monthindex)))] ; remove the invalid -99.9 from the daylist
       (if (= yearlist []) ; for all of the years
         ;avgvalues
-        (MonthlyMeanAndVarience.
+        (s/conform ::MonthlyMeanAndVarience (->MonthlyMeanAndVarience
          (MonthList monthindex)
          targetavg ; code snippit for abs found from https://groups.google.com/g/clojure/c/quEzEM_ndCY
          (apply min-key #(abs (- (:Value %) targetavg)) avgvalues) ; search for (:Value %) since only models with value list will enter this part
-         (apply max-key #(abs (- (:Value %) targetavg)) avgvalues)) ; remove any -99.9 added in the recur
+         (apply max-key #(abs (- (:Value %) targetavg)) avgvalues))) ; remove any -99.9 added in the recur
         (recur
          (rest yearlist)
          (if (= listval [])
@@ -309,13 +317,15 @@
 ; (println  (MeanMonthTemp (ReadYearlyColumn "weatherdata.txt") 11))
 
 (defn MonthTempData [datainput]
+  {:pre [(s/valid? ::ListofYearWeatherData datainput)]
+   :post [(s/valid? ::ListofMonthlyMeanAndVarience %)]}
   (loop [monthindex 0 monthlist []]
     (if (= monthindex 12)
-      monthlist
+      (s/conform ::ListofMonthlyMeanAndVarience monthlist)
       (recur
        (inc monthindex)
        (conj monthlist (MonthlyTempVariation datainput monthindex (MeanMonthTemp datainput monthindex)))))))
-;(println (MonthTempData (ReadYearlyColumn "weatherdata.txt")))
+; (println (MonthTempData (ReadYearlyColumn "weatherdata.txt")))
 
 ; Chris said I can manipulate teh data file e.g.add the extra 10 spaces to the 2022 values to make the data semetric and clean
 ; but I MUST mention my change in the recording /\ I did add the spaces and a ending new line
