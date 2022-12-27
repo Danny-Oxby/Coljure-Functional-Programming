@@ -107,9 +107,11 @@
 (s/def ::DayList (s/coll-of double? :kind sequence))
 (s/def ::Monthlyweatherdata
   (s/keys :req-un [::Year ::Month ::DayList]))
-(s/def ::YearWeatherData (s/coll-of ::Monthlyweatherdata)) ; a list of valid weatherdata <-highest leve spec needed for most pre conditions
+(s/def ::YearWeatherData (s/coll-of ::Monthlyweatherdata)) ; a list of valid weatherdata 
+(s/def ::ListofYearWeatherData (s/coll-of ::YearWeatherData)) ; a list of valid YearWeatherData <-highest leve spec needed for most pre conditions
 
 (defn GetDailyData [year monthindex] ; conform seq? returned
+  {:pre [(s/conform number? monthindex)]}
   (loop [datarow year values []]
     (if (= (count datarow) 0) ; for all 31 data peices
       (s/conform ::DayList values) ; make sure the return is a list of doubles
@@ -136,41 +138,8 @@
 
 ; (println (GetMonthData (str/split (slurp "oneyeardata.txt") #"\r\n")))
 
-; (println (s/conform ::SWeatherdata {::SYear 1772 
-;                                     ::SMonth "Jan" 
-;                                     ::SDay [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8]}))
-; (println (s/explain ::SWeatherdata (->Monthlyweatherdata ; <-why does this not work but above does? the req needed to match the value names?
-;                         1772
-;                         "Jan"
-;                         [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8])
-;            ))
-
-(defrecord Simplerec [num str])
-(defrecord SimpleColl [Simplerec])
-(s/def ::num number?)
-(s/def ::str string?)
-(s/def ::Simplerec (s/keys :req-un [::num ::str]))
-(s/def ::SimpleColl (s/coll-of ::Simplerec))
-
-; (println (let [value (Simplerec. 1 "a")]
-;            (s/conform ::Simplerec {::num (:value value)
-;                                          ::str (:letter value)}))       
-; )
-
-; (println (s/conform ::Simplerec {:num 123 :str "abs"}))
-; (println (s/conform ::Simplerec (->Simplerec 123 "abs")))
-; (println (let [values [(Simplerec. 1 "a")
-;                        (Simplerec. 3 "c")
-;                        (Simplerec. 2 "b")]]
-;            (s/conform ::Simplerec (last values)))
-; )
-; (println (let [values [(Simplerec. 1 "a")
-;                        (Simplerec. 3 "c")
-;                        (Simplerec. 2 "b")]]
-;            (s/conform ::SimpleColl values))
-; )
-
 (defn ReadYearlyColumn [filename]
+  {:post [(s/conform ::ListofYearWeatherData %)]}
   (let [info (partition 31 (str/split (slurp filename) #"\r\n")) ; split on every line remove the trailling whate space
         yearvalue (loop [year info values []]
                     (if (= (count year) 0)
@@ -326,6 +295,9 @@
 ; but I MUST mention my change in the recording /\ I did add the spaces and a ending new line
 
 
+
+
+
 ; version where trailing spaces are allowed 
 ; (defn ASCIIConvert [input] ; this methods assumes that any input can't end in a space (since i tmake no gramatical sence)
 ;   {:pre [(s/valid? ::ASCIIInput input)] ; the input must always be a letter or number
@@ -463,3 +435,37 @@
 ; (defn AsciiTest [input] ; <- mapv retuns nulls and the values are side effects <- dosn't do what we want
 ;   (mapv #(concat (ConvertMap2 %) "   ") input))
 ; (println (AsciiTest "abc"))
+
+; (println (s/conform ::SWeatherdata {::SYear 1772 
+;                                     ::SMonth "Jan" 
+;                                     ::SDay [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8]}))
+; (println (s/explain ::SWeatherdata (->Monthlyweatherdata ; <-why does this not work but above does? the req needed to match the value names?
+;                         1772
+;                         "Jan"
+;                         [3.2 2.0 2.7 2.7 1.5 2.2 2.5 0.0 0.0 4.5 6.2 5.2 2.5 1.7 3.0 2.0 -1.8 -1.3 -1.8 -1.0 -0.6 1.5 1.2 0.5 1.2 1.5 0.0 1.5 -3.3 -1.0 -0.8])
+;            ))
+
+; (defrecord Simplerec [num str])
+; (defrecord SimpleColl [Simplerec])
+; (s/def ::num number?)
+; (s/def ::str string?)
+; (s/def ::Simplerec (s/keys :req-un [::num ::str]))
+; (s/def ::SimpleColl (s/coll-of ::Simplerec))
+
+; (println (let [value (Simplerec. 1 "a")]
+;            (s/conform ::Simplerec {::num (:value value)
+;                                          ::str (:letter value)}))       
+; )
+
+; (println (s/conform ::Simplerec {:num 123 :str "abs"}))
+; (println (s/conform ::Simplerec (->Simplerec 123 "abs")))
+; (println (let [values [(Simplerec. 1 "a")
+;                        (Simplerec. 3 "c")
+;                        (Simplerec. 2 "b")]]
+;            (s/conform ::Simplerec (last values)))
+; )
+; (println (let [values [(Simplerec. 1 "a")
+;                        (Simplerec. 3 "c")
+;                        (Simplerec. 2 "b")]]
+;            (s/conform ::SimpleColl values))
+; )
