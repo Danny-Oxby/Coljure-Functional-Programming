@@ -9,7 +9,7 @@
 ;; MENTION IN REPORT
 ; For my morse and ascii I has used lowercase letters rather than upper case, this is becasue there is no
 ; diffrence in morse between upper and lowercase, and morese normally only uses one case. In my case I used lower case
-; mainly since the converter i based of used lowercase
+; since the converter I based of used lowercase
 
 ; morse code has 3 space "   " seperators between the letters and 7 space "       " decomes a "space" charactor
 (def ConvertMap {"a" ".-" "b" "-..." "c" "-.-." "d" "-.." "e" "." ;; ascii values here
