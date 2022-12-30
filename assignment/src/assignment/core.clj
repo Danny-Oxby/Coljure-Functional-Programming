@@ -88,7 +88,7 @@
                    ))
                (if (= (count wordstr) 1)
                  "" ; dont add a trailing space (for gramatical reasons)
-                 " ")) ; add sapce for word seperation
+                 " ")) ; add space for word seperation
        ))))
 ; (println (MorseConvert "   .-   -...   -.-.   -..   .       .       .   . ")) ; <- abcde e ee
 ; (println (MorseConvert ".-   -...   -.-.   -..   .       -...   .   -..")) ; <- abcde bed
@@ -350,4 +350,4 @@
       (recur
        (inc monthindex)
        (conj monthlist (MonthlyTempVariation datainput monthindex (MeanMonthTemp datainput monthindex)))))))
-; (println (MonthTempData (ReadYearlyColumn "weatherdata.txt")))
+;(println (MonthTempData (ReadYearlyColumn "weatherdata.txt")))
