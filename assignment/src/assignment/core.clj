@@ -108,9 +108,11 @@
 ;; position 0 is always an empty space
 
 
-;; storage options
-;; record of year {month : "Jan" {daylist ["1" : "12.3" "2" : "3.12"]}} <- easiest manipulation <- try this one
-;; record of year {day : "1" {monthlist [Jan : "12.3" "Feb" : "5.23"]}} <- easiest input
+;; storage 
+;; record of year {month : "Jan" {daylist ["12.3" "3.12"]}} <- easiest manipulation <- try this one
+
+; Chris said I can manipulate the data file e.g.add the extra 10 spaces to the 2022 values to make the data semetric and clean
+; but I MUST mention my change in the recording /\ I did add the spaces and a ending new line
 
 (defrecord Monthlyweatherdata [Year Month DayList])
 (def MonthList ["Jan" "Feb" "Mar" "Arp" "May" "Jun" "Jul" "Aug" "Sep" "Oct" "Nov" "Dec"])
@@ -125,7 +127,7 @@
 (s/def ::YearWeatherData (s/coll-of ::Monthlyweatherdata)) ; a list of valid weatherdata 
 (s/def ::ListofYearWeatherData (s/coll-of ::YearWeatherData)) ; a list of valid YearWeatherData <-highest leve spec needed for most pre conditions
 
-(defn GetDailyData [year monthindex] ; conform seq? returned
+(defn GetDailyData [year monthindex] ; return a list of double values for the days
   {:pre [(s/valid? number? monthindex)
          (s/valid? (s/coll-of string?) year)]
    :post [(s/valid? ::DayList %)]}
@@ -349,6 +351,3 @@
        (inc monthindex)
        (conj monthlist (MonthlyTempVariation datainput monthindex (MeanMonthTemp datainput monthindex)))))))
 ; (println (MonthTempData (ReadYearlyColumn "weatherdata.txt")))
-
-; Chris said I can manipulate teh data file e.g.add the extra 10 spaces to the 2022 values to make the data semetric and clean
-; but I MUST mention my change in the recording /\ I did add the spaces and a ending new line
